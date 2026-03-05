@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Mohit Runs to Sriju 💕</title>
+<link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: #1a0a2e;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    min-height: 100vh; overflow: hidden; user-select: none;
+  }
+  .stars { position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0; }
+  .star  { position:absolute;background:white;border-radius:50%;animation:twinkle ease-in-out infinite; }
+  @keyframes twinkle { 0%,100%{opacity:0.2;}50%{opacity:1;} }
+
+  #gameWrapper { position:relative;z-index:10;display:flex;flex-direction:column;align-items:center;gap:10px; }
+
+  #hud {
+    display:flex;align-items:center;justify-content:space-between;
+    width:580px;max-width:95vw;padding:8px 18px;
+    background:rgba(255,255,255,0.1);border-radius:50px;
+    backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.2);
+  }
+  #hud span { color:white;font-weight:800;font-size:1rem; }
+  #livesDisplay { font-size:1.3rem;letter-spacing:3px; }
+
+  #gameCanvas {
+    border-radius:20px;
+    box-shadow:0 0 60px rgba(255,107,157,0.5),0 20px 40px rgba(0,0,0,0.5);
+    display:block;cursor:pointer;
+    border:3px solid rgba(255,107,157,0.5);
+  }
+
+  #jumpHint { font-size:0.82rem;color:rgba(255,255,255,0.55);font-weight:700;animation:pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:0.4;}50%{opacity:1;} }
+
+  .overlay {
+    position:absolute;top:0;left:0;width:100%;height:100%;
+    border-radius:17px;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;
+    text-align:center;padding:24px;z-index:20;
+    animation:fadeIn 0.4s ease;
+  }
+  @keyframes fadeIn { from{opacity:0;transform:scale(0.94);}to{opacity:1;transform:scale(1);} }
+
+  .ov-start { background:linear-gradient(160deg,rgba(255,80,160,0.93),rgba(140,60,200,0.93));backdrop-filter:blur(8px); }
+  .ov-over  { background:linear-gradient(160deg,rgba(30,5,50,0.96),rgba(90,10,50,0.96));backdrop-filter:blur(8px); }
+  .ov-win   { background:linear-gradient(160deg,rgba(255,80,160,0.96),rgba(255,160,80,0.96));backdrop-filter:blur(8px); }
+
+  .overlay h1 {
+    font-family:'Pacifico',cursive;font-size:clamp(1.6rem,5vw,2.4rem);
+    color:white;text-shadow:0 3px 20px rgba(0,0,0,0.3);
+    margin-bottom:8px;line-height:1.3;
+  }
+  .overlay p { color:rgba(255,255,255,0.9);font-size:clamp(0.8rem,2.2vw,0.95rem);font-weight:700;margin-bottom:5px;max-width:360px;line-height:1.6; }
+  .big-emoji { font-size:clamp(2.5rem,7vw,4rem);margin-bottom:10px;display:block;animation:bounce 1s ease-in-out infinite; }
+  @keyframes bounce { 0%,100%{transform:translateY(0) scale(1);}50%{transform:translateY(-10px) scale(1.1);} }
+
+  .photo-row { display:flex;gap:14px;margin:10px 0;align-items:center;justify-content:center; }
+  .portrait  { width:70px;height:70px;border-radius:50%;border:3px solid white;object-fit:cover;box-shadow:0 4px 16px rgba(0,0,0,0.3); }
+  .pfb       { width:70px;height:70px;border-radius:50%;border:3px solid white;background:linear-gradient(135deg,#ff6b9d,#c3b1e1);display:none;align-items:center;justify-content:center;font-size:1.6rem; }
+
+  .love-note {
+    margin-top:10px;background:rgba(255,255,255,0.15);border-radius:14px;
+    padding:12px 18px;max-width:360px;font-size:0.84rem;color:white;
+    line-height:1.7;border:1px solid rgba(255,255,255,0.3);font-style:italic;
+  }
+  .btn {
+    margin-top:14px;padding:13px 36px;background:white;color:#ff4d6d;
+    border:none;border-radius:50px;font-family:'Nunito',sans-serif;
+    font-size:1rem;font-weight:900;cursor:pointer;
+    box-shadow:0 6px 20px rgba(0,0,0,0.2);transition:transform 0.2s,box-shadow 0.2s;
+  }
+  .btn:hover { transform:translateY(-3px) scale(1.04); }
+  .btn:active { transform:scale(0.97); }
+
+  #canvasContainer { position:relative; }
+  .win-heart { position:absolute;font-size:1.4rem;pointer-events:none;animation:floatUp 2s ease-out forwards; }
+  @keyframes floatUp { 0%{transform:translateY(0) scale(0);opacity:1;}100%{transform:translateY(-130px) scale(1.2);opacity:0;} }
+</style>
+</head>
+<body>
+
+<div class="stars" id="stars"></div>
+
+<div id="gameWrapper">
+  <div id="hud">
+    <span>💌 <span id="score">0</span> / 5</span>
+    <span id="livesDisplay">❤️❤️❤️</span>
+    <span>Collect all 5! 🌸</span>
+  </div>
+
+  <div id="canvasContainer">
+    <canvas id="gameCanvas" width="580" height="230"></canvas>
+
+    <!-- START -->
+    <div class="overlay ov-start" id="startScreen">
+      <span class="big-emoji">🏃💨</span>
+      <h1>Mohit Runs to Sriju 💕</h1>
+      <div class="photo-row">
+        <img src="hello.jpg" class="portrait" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+        <div class="pfb">🧑</div>
+        <span style="font-size:1.8rem">💕</span>
+        <img src="hi.jpg" class="portrait" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+        <div class="pfb">👧</div>
+      </div>
+      <p>Jump over obstacles & collect 5 💌<br/>then reach Sriju! 🌸</p>
+      <p style="color:rgba(255,255,255,0.65);font-size:0.78rem;">Space / Tap to jump &nbsp;•&nbsp; 3 hearts &nbsp;•&nbsp; Easy mode 😊</p>
+      <button class="btn" id="startBtn">Let's Go! 🏃</button>
+    </div>
+
+    <!-- GAME OVER -->
+    <div class="overlay ov-over" id="gameoverScreen" style="display:none;">
+      <span class="big-emoji">😭</span>
+      <h1>Mohit got lost!</h1>
+      <img src="hello.jpg" class="portrait" style="margin:8px 0;" onerror="this.style.display='none'"/>
+      <p>Mohit will always find his way back to you, Sriju 💕</p>
+      <p style="color:#ffb347;">Letters collected: <span id="finalScore">0</span> 💌</p>
+      <button class="btn" id="retryBtn">Try Again 💪</button>
+    </div>
+
+    <!-- WIN -->
+    <div class="overlay ov-win" id="winScreen" style="display:none;">
+      <span class="big-emoji">🥰</span>
+      <h1>Mohit reached Sriju! 💕</h1>
+      <div class="photo-row">
+        <img src="hello.jpg" class="portrait" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+        <div class="pfb">🧑</div>
+        <span style="font-size:1.6rem">🤗</span>
+        <img src="hi.jpg" class="portrait" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+        <div class="pfb">👧</div>
+      </div>
+      <div class="love-note">
+        "1 month with you already feels like the best chapter of my life.
+        Nothing could ever stop me from reaching you, Sriju 🌸"
+        <br/>— Timro Mohit 💖
+      </div>
+      <button class="btn" id="playAgainBtn">Play Again 🎮</button>
+    </div>
+  </div>
+
+  <div id="jumpHint">⎵ Space or Tap to jump</div>
+</div>
+
+<script>
+// ── Stars ──
+const starsEl = document.getElementById('stars');
+for(let i=0;i<70;i++){
+  const s=document.createElement('div'); s.className='star';
+  const sz=1+Math.random()*2.2;
+  s.style.cssText=`width:${sz}px;height:${sz}px;left:${Math.random()*100}vw;top:${Math.random()*100}vh;animation-duration:${1.5+Math.random()*3}s;animation-delay:${Math.random()*3}s`;
+  starsEl.appendChild(s);
+}
+
+// ── Canvas ──
+const canvas=document.getElementById('gameCanvas');
+const ctx=canvas.getContext('2d');
+const CW=580, CH=230, GY=172;
+
+function resize(){
+  const mw=Math.min(580,window.innerWidth*0.95);
+  canvas.style.width=mw+'px'; canvas.style.height=(mw*230/580)+'px';
+  document.getElementById('hud').style.width=mw+'px';
+}
+resize(); window.addEventListener('resize',resize);
+
+// ── Images ──
+const mohitImg=new Image(); mohitImg.src='hello.jpg';
+const srijuImg=new Image(); srijuImg.src='hi.jpg';
+
+// ── State ──
+let state='start', score=0, lives=3, frame=0, bgOff=0, mtOff=0;
+let obstacles=[], letters=[], particles=[], floatTexts=[];
+let srijuChar=null, gameWon=false;
+const NEED=5;
+
+// ── Player ──
+const P={x:70,y:GY,w:44,h:44,vy:0,jumping:false,inv:0,run:0};
+
+// ── Jump ──
+function jump(){
+  if(state!=='playing') return;
+  if(!P.jumping){ P.vy=-12.5; P.jumping=true; burst(P.x+P.w/2,P.y+P.h,'#ffb347',5); }
+}
+
+// ── Obstacles ──
+const OBS=[
+  {e:'📚',l:'Homework',w:28,h:34},
+  {e:'📱',l:'Bad WiFi', w:22,h:34},
+  {e:'😤',l:'Stress',   w:26,h:32},
+  {e:'🌧️',l:'Rain',     w:26,h:30},
+];
+function spawnObs(){
+  const t=OBS[Math.floor(Math.random()*OBS.length)];
+  obstacles.push({x:CW+20,y:GY+P.h-t.h,w:t.w,h:t.h,e:t.e,l:t.l});
+}
+function spawnLetter(){
+  letters.push({x:CW+10,y:GY-28-Math.random()*35,w:22,h:22,bob:Math.random()*Math.PI*2});
+}
+
+// ── Particles / float text ──
+function burst(x,y,col,n){
+  for(let i=0;i<n;i++) particles.push({x,y,vx:(Math.random()-.5)*5,vy:-Math.random()*4-1,life:1,col,sz:3+Math.random()*3});
+}
+function floatText(x,y,t,c){ floatTexts.push({x,y,t,c,life:1,vy:-1.4}); }
+
+// ── Collision ──
+function hits(a,b,p=7){ return a.x+p<b.x+b.w-p&&a.x+a.w-p>b.x+p&&a.y+p<b.y+b.h-p&&a.y+a.h-p>b.y+p; }
+
+// ── Background ──
+function drawBG(){
+  const sg=ctx.createLinearGradient(0,0,0,GY);
+  sg.addColorStop(0,'#0d0530'); sg.addColorStop(0.6,'#200a50'); sg.addColorStop(1,'#4a1060');
+  ctx.fillStyle=sg; ctx.fillRect(0,0,CW,GY);
+
+  // moon
+  ctx.fillStyle='#fffde0'; ctx.shadowColor='#fffde0'; ctx.shadowBlur=18;
+  ctx.beginPath(); ctx.arc(490,30,20,0,Math.PI*2); ctx.fill(); ctx.shadowBlur=0;
+
+  // mountains
+  mtOff=(mtOff+0.4)%CW;
+  ctx.fillStyle='#2a0d55';
+  for(let i=-1;i<3;i++){
+    const mx=i*210-mtOff;
+    ctx.beginPath();
+    ctx.moveTo(mx,GY); ctx.lineTo(mx+55,GY-70); ctx.lineTo(mx+100,GY-44);
+    ctx.lineTo(mx+160,GY-80); ctx.lineTo(mx+210,GY); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.65)';
+    ctx.beginPath(); ctx.moveTo(mx+50,GY-65); ctx.lineTo(mx+55,GY-70); ctx.lineTo(mx+60,GY-65); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(mx+154,GY-75); ctx.lineTo(mx+160,GY-80); ctx.lineTo(mx+166,GY-75); ctx.fill();
+    ctx.fillStyle='#2a0d55';
+  }
+
+  // ground
+  bgOff=(bgOff+3)%40;
+  const gg=ctx.createLinearGradient(0,GY,0,CH);
+  gg.addColorStop(0,'#4a8a44'); gg.addColorStop(1,'#2d5428');
+  ctx.fillStyle=gg; ctx.fillRect(0,GY+P.h,CW,CH-GY-P.h);
+  ctx.strokeStyle='#5aaa54'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(0,GY+P.h); ctx.lineTo(CW,GY+P.h); ctx.stroke();
+  ctx.strokeStyle='rgba(255,255,255,0.1)'; ctx.lineWidth=1; ctx.setLineDash([18,18]);
+  ctx.beginPath(); ctx.moveTo(-bgOff,GY+P.h+7); ctx.lineTo(CW+40,GY+P.h+7); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // sparkles
+  ['✨','💫','🌸','⭐','💕'].forEach((s,i)=>{
+    const sx=((i*130+frame*0.35)%(CW+40))-20;
+    const sy=18+Math.sin(frame*0.05+i)*12+i*14;
+    ctx.font='9px serif'; ctx.textAlign='center'; ctx.fillText(s,sx,sy);
+  });
+}
+
+// ── Draw Player (hello.jpg in circle) ──
+function drawPlayer(){
+  if(P.inv>0&&Math.floor(P.inv/4)%2===0) return;
+  const cx=P.x+P.w/2, cy=P.y+P.h/2-2;
+
+  // shadow
+  ctx.fillStyle='rgba(0,0,0,0.18)';
+  ctx.beginPath(); ctx.ellipse(cx,GY+P.h+3,P.w/2,5,0,0,Math.PI*2); ctx.fill();
+
+  P.run+=P.jumping?0:0.2;
+  // legs
+  const ls=Math.sin(P.run)*7;
+  ctx.fillStyle='#5a3a8a';
+  ctx.beginPath(); ctx.roundRect(P.x+8,P.y+P.h-12,10,13+ls,4); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(P.x+P.w-18,P.y+P.h-12,10,13-ls,4); ctx.fill();
+
+  // clipped photo
+  ctx.save();
+  ctx.beginPath(); ctx.arc(cx,cy,21,0,Math.PI*2); ctx.clip();
+  if(mohitImg.complete&&mohitImg.naturalWidth>0){
+    ctx.drawImage(mohitImg,cx-21,cy-21,42,42);
+  } else {
+    ctx.fillStyle='#ffcba4'; ctx.beginPath(); ctx.arc(cx,cy,21,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#3a2010'; ctx.font='22px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('🧑',cx,cy);
+  }
+  ctx.restore();
+
+  // ring
+  ctx.strokeStyle='#ff6b9d'; ctx.lineWidth=3;
+  ctx.shadowColor='#ff6b9d'; ctx.shadowBlur=10;
+  ctx.beginPath(); ctx.arc(cx,cy,21,0,Math.PI*2); ctx.stroke(); ctx.shadowBlur=0;
+
+  // M badge
+  ctx.fillStyle='#ff6b9d';
+  ctx.beginPath(); ctx.arc(cx,P.y+P.h+4,8,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='white'; ctx.font='bold 9px Nunito,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('M',cx,P.y+P.h+4);
+}
+
+// ── Draw Sriju (hi.jpg in circle) ──
+function drawSrijuChar(sx,sy){
+  const cx=sx+22, cy=sy+20;
+
+  ctx.fillStyle='rgba(0,0,0,0.15)';
+  ctx.beginPath(); ctx.ellipse(cx,GY+P.h+3,22,5,0,0,Math.PI*2); ctx.fill();
+
+  // waving arms
+  const wv=Math.sin(frame*0.12)*6;
+  ctx.fillStyle='#ffcba4';
+  ctx.beginPath(); ctx.roundRect(sx-6,sy+8-wv,8,14,4); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(sx+38,sy+8+wv/2,8,14,4); ctx.fill();
+
+  ctx.save();
+  ctx.beginPath(); ctx.arc(cx,cy,21,0,Math.PI*2); ctx.clip();
+  if(srijuImg.complete&&srijuImg.naturalWidth>0){
+    ctx.drawImage(srijuImg,cx-21,cy-21,42,42);
+  } else {
+    ctx.fillStyle='#ffcba4'; ctx.beginPath(); ctx.arc(cx,cy,21,0,Math.PI*2); ctx.fill();
+    ctx.font='22px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('👧',cx,cy);
+  }
+  ctx.restore();
+
+  ctx.strokeStyle='#ffb347'; ctx.lineWidth=3;
+  ctx.shadowColor='#ffb347'; ctx.shadowBlur=10;
+  ctx.beginPath(); ctx.arc(cx,cy,21,0,Math.PI*2); ctx.stroke(); ctx.shadowBlur=0;
+
+  // S badge
+  ctx.fillStyle='#ffb347';
+  ctx.beginPath(); ctx.arc(cx,GY+P.h+4,8,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='white'; ctx.font='bold 9px Nunito,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('S',cx,GY+P.h+4);
+
+  // heart bob
+  const hb=Math.sin(frame*0.1)*3;
+  ctx.font='14px serif'; ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+  ctx.fillText('💕',cx,sy-8+hb);
+}
+
+// ── Progress bar ──
+function drawProgress(){
+  const prog=Math.min(score/NEED,1);
+  ctx.fillStyle='rgba(255,255,255,0.12)';
+  ctx.beginPath(); ctx.roundRect(10,10,110,10,5); ctx.fill();
+  const pg=ctx.createLinearGradient(10,0,120,0);
+  pg.addColorStop(0,'#ff6b9d'); pg.addColorStop(1,'#ffb347');
+  ctx.fillStyle=pg; ctx.beginPath(); ctx.roundRect(10,10,110*prog,10,5); ctx.fill();
+  ctx.fillStyle='white'; ctx.font='bold 8px Nunito,sans-serif'; ctx.textAlign='left'; ctx.textBaseline='middle';
+  ctx.fillText(`${score}/${NEED} 💌`,125,15);
+}
+
+// ── HUD ──
+function updateHUD(){
+  document.getElementById('score').textContent=score;
+  document.getElementById('livesDisplay').textContent=[0,1,2].map(i=>i<lives?'❤️':'🖤').join('');
+}
+
+// ── Win hearts ──
+function showWinHearts(){
+  const c=document.getElementById('canvasContainer');
+  for(let i=0;i<18;i++) setTimeout(()=>{
+    const h=document.createElement('div'); h.className='win-heart';
+    h.textContent=['💕','💖','🌸','✨','💗'][Math.floor(Math.random()*5)];
+    h.style.left=(10+Math.random()*80)+'%'; h.style.bottom='15%';
+    h.style.animationDelay=(Math.random()*0.4)+'s';
+    c.appendChild(h); setTimeout(()=>h.remove(),2400);
+  },i*80);
+}
+
+// ── Game loop ──
+let raf;
+function loop(){
+  if(state!=='playing') return;
+  frame++;
+  ctx.clearRect(0,0,CW,CH);
+  drawBG();
+
+  // spawn
+  if(frame%115===0) spawnObs();
+  if(frame%68===0&&score<NEED) spawnLetter();
+
+  // spawn Sriju when 4 letters collected
+  if(score>=NEED-1&&!srijuChar&&!gameWon){
+    srijuChar={x:CW+50};
+  }
+
+  // physics
+  P.vy+=0.6; P.y+=P.vy;
+  if(P.y>=GY){ P.y=GY; P.vy=0; P.jumping=false; }
+  if(P.inv>0) P.inv--;
+
+  // move objects
+  obstacles.forEach(o=>o.x-=3); obstacles=obstacles.filter(o=>o.x>-50);
+  letters.forEach(l=>l.x-=3);   letters=letters.filter(l=>l.x>-30);
+
+  // Sriju walks in
+  if(srijuChar){
+    srijuChar.x-=1.8;
+    drawSrijuChar(srijuChar.x, GY-2);
+    if(srijuChar.x<P.x+P.w+5){
+      gameWon=true; srijuChar=null;
+      setTimeout(()=>{
+        state='win';
+        document.getElementById('winScreen').style.display='flex';
+        showWinHearts();
+      },400);
+      return;
+    }
+  }
+
+  // draw obstacles
+  obstacles.forEach(o=>{
+    ctx.font=`${o.h*0.9}px serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(o.e,o.x+o.w/2,o.y+o.h/2);
+    ctx.fillStyle='rgba(255,100,100,0.8)'; ctx.font='bold 7px Nunito,sans-serif';
+    ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+    ctx.fillText(o.l,o.x+o.w/2,o.y-4);
+  });
+
+  // draw letters
+  letters.forEach(l=>{
+    const b=Math.sin(frame*0.09+l.bob)*4;
+    ctx.font='20px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.shadowColor='#ff6b9d'; ctx.shadowBlur=8;
+    ctx.fillText('💌',l.x+l.w/2,l.y+l.h/2+b); ctx.shadowBlur=0;
+  });
+
+  // obstacle hit
+  if(P.inv===0){
+    for(let i=obstacles.length-1;i>=0;i--){
+      if(hits(P,obstacles[i])){
+        burst(P.x+P.w/2,P.y+P.h/2,'#ff4d6d',8);
+        floatText(P.x+P.w/2,P.y-10,'Ouch! 😣','#ff4d6d');
+        obstacles.splice(i,1); lives--; P.inv=80; updateHUD();
+        if(lives<=0){
+          state='gameover';
+          document.getElementById('finalScore').textContent=score;
+          document.getElementById('gameoverScreen').style.display='flex';
+          return;
+        }
+        break;
+      }
+    }
+  }
+
+  // letter collect
+  for(let i=letters.length-1;i>=0;i--){
+    if(hits(P,letters[i])){
+      score++;
+      burst(letters[i].x+11,letters[i].y+11,'#ff6b9d',7);
+      floatText(letters[i].x+11,letters[i].y-5,'+1 💌','#ff6b9d');
+      letters.splice(i,1); updateHUD();
+    }
+  }
+
+  drawPlayer();
+
+  // particles
+  particles.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; p.vy+=0.1; p.life-=0.045; });
+  particles=particles.filter(p=>p.life>0);
+  ctx.save();
+  particles.forEach(p=>{ ctx.globalAlpha=p.life; ctx.fillStyle=p.col; ctx.beginPath(); ctx.arc(p.x,p.y,p.sz*p.life,0,Math.PI*2); ctx.fill(); });
+  ctx.restore();
+
+  // float texts
+  floatTexts.forEach(ft=>{ ft.y+=ft.vy; ft.life-=0.025; });
+  floatTexts=floatTexts.filter(ft=>ft.life>0);
+  ctx.save();
+  floatTexts.forEach(ft=>{ ctx.globalAlpha=ft.life; ctx.fillStyle=ft.c; ctx.font='bold 13px Nunito,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='alphabetic'; ctx.fillText(ft.t,ft.x,ft.y); });
+  ctx.restore();
+
+  drawProgress();
+  raf=requestAnimationFrame(loop);
+}
+
+// ── Reset ──
+function startGame(){
+  score=0; lives=3; frame=0; bgOff=0; mtOff=0;
+  gameWon=false; srijuChar=null;
+  obstacles=[]; letters=[]; particles=[]; floatTexts=[];
+  P.x=70; P.y=GY; P.vy=0; P.jumping=false; P.inv=0; P.run=0;
+  ['startScreen','gameoverScreen','winScreen'].forEach(id=>document.getElementById(id).style.display='none');
+  updateHUD(); state='playing';
+  cancelAnimationFrame(raf); loop();
+}
+
+// ── Controls ──
+document.addEventListener('keydown',e=>{ if(e.code==='Space'){e.preventDefault();jump();} });
+canvas.addEventListener('click',jump);
+canvas.addEventListener('touchstart',e=>{e.preventDefault();jump();},{passive:false});
+document.getElementById('startBtn').addEventListener('click',startGame);
+document.getElementById('retryBtn').addEventListener('click',startGame);
+document.getElementById('playAgainBtn').addEventListener('click',startGame);
+
+drawBG();
+</script>
+</body>
+</html>
